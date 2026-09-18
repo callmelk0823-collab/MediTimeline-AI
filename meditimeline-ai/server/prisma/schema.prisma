@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String      @id @default(cuid())
+  email               String      @unique
+  username            String      @unique
+  passwordHash        String
+  name                String
+  role                String      @default("STAFF")
+  status              String      @default("ACTIVE")
+  failedLoginAttempts Int         @default(0)
+  lockedUntil         DateTime?
+  totpSecretEncrypted String?
+  recoveryCodes       String?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  auditLogs           AuditLog[]
+}
+
+model AuditLog {
+  id           String    @id @default(cuid())
+  userId       String?
+  action       String
+  resourceType String?
+  resourceId   String?
+  success      Boolean   @default(true)
+  metadata     String?
+  timestamp    DateTime  @default(now())
+  user         User?     @relation(fields: [userId], references: [id])
+}
+
+model Patient {
+  id          String        @id @default(cuid())
+  patientCode String        @unique
+  name        String
+  age         Int
+  gender      String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  documents   Document[]
+  events      MedicalEvent[]
+}
+
+model Document {
+  id               String            @id @default(cuid())
+  patientId        String
+  filename         String
+  originalName     String
+  mimeType         String
+  fileSize         Int
+  documentType     String
+  documentDate     DateTime?
+  processingStatus String
+  uploadedAt       DateTime          @default(now())
+  processedAt      DateTime?
+  patient          Patient           @relation(fields: [patientId], references: [id])
+  medicalEvents    MedicalEvent[]
+  extractionRecords ExtractionRecord[]
+}
+
+model MedicalEvent {
+  id             String    @id @default(cuid())
+  patientId      String
+  documentId     String
+  eventType      String
+  eventDate      DateTime
+  title          String
+  description    String
+  extractedData  String
+  reviewStatus   String
+  createdAt      DateTime  @default(now())
+  patient        Patient   @relation(fields: [patientId], references: [id])
+  document       Document  @relation(fields: [documentId], references: [id])
+}
+
+model ExtractionRecord {
+  id           String   @id @default(cuid())
+  documentId   String
+  provider     String
+  rawText      String
+  structuredData String
+  confidence   Float?
+  createdAt    DateTime @default(now())
+  document     Document @relation(fields: [documentId], references: [id])
+}
